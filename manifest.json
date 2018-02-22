@@ -1,0 +1,13 @@
+{
+  "manifest_version": 2,
+  "name": "get-fb-share-list",
+  "description": "Get Facebook shared posts users list",
+  "version": "0.1.0",
+  "content_scripts": [
+    {
+      "matches": ["https://www.facebook.com/shares/*"],
+      "js": ["dist/app.js"]
+    }
+  ],
+  "permissions": ["https://www.facebook.com/shares/*", "tabs", "webNavigation"]
+}
