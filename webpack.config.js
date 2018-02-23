@@ -1,7 +1,7 @@
 module.exports = {
-  entry: './src/app.js',
+  entry: './src/content.js',
   output: {
-    filename: 'app.js',
+    filename: 'content.js',
     path: __dirname + '/dist',
   },
 };

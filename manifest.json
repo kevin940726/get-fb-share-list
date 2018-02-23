@@ -3,11 +3,20 @@
   "name": "get-fb-share-list",
   "description": "Get Facebook shared posts users list",
   "version": "0.1.0",
-  "content_scripts": [
-    {
-      "matches": ["https://www.facebook.com/shares/*"],
-      "js": ["dist/app.js"]
-    }
-  ],
-  "permissions": ["https://www.facebook.com/shares/*", "tabs", "webNavigation"]
+  "background": {
+    "scripts": ["src/background.js"],
+    "persistent": false
+  },
+  "page_action": {
+    "default_title": "Get Facebook shared posts list"
+  },
+  "permissions": [
+    "https://*.facebook.com/shares/*",
+    "activeTab",
+    "declarativeContent",
+    "runtime",
+    "pageAction",
+    "tabs",
+    "extension"
+  ]
 }
