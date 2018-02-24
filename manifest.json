@@ -11,7 +11,7 @@
     "default_title": "Get Facebook shared posts list"
   },
   "permissions": [
-    "https://*.facebook.com/shares/*",
+    "https://*.facebook.com/*",
     "activeTab",
     "declarativeContent",
     "runtime",

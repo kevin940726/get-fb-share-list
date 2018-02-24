@@ -7,7 +7,6 @@ chrome.runtime.onInstalled.addListener(() => {
             pageUrl: {
               schemes: ['https'],
               hostEquals: 'www.facebook.com',
-              pathPrefix: '/shares',
             },
           }),
         ],
@@ -22,10 +21,10 @@ chrome.pageAction.onClicked.addListener(tab => {
     file: 'dist/content.js',
   });
 
-  const url = chrome.extension.getURL('src/index.html');
+  // const url = chrome.extension.getURL('src/index.html');
 
-  chrome.tabs.create({
-    url,
-    selected: true,
-  });
+  // chrome.tabs.create({
+  //   url,
+  //   selected: true,
+  // });
 });

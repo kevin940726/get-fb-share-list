@@ -1,52 +1,123 @@
 const port = chrome.runtime.connect();
 
-const flattenNodes = nodes =>
-  Array.from(nodes).reduce((list, node) => [...list, ...node.children], []);
+const getFBID = profileLink => {
+  const url = new URL(profileLink);
 
-const scrollToBottom = () => window.scrollTo(0, document.body.offsetHeight);
+  // www.facebook.com/profile.php?id=xxx
+  if (url.searchParams && url.searchParams.has('id')) {
+    return url.searchParams.get('id');
+  }
 
-const mapElementToShare = element => ({
-  name: element.querySelector('a.profileLink').innerHTML,
-  link: element.querySelector('.clearfix > a').getAttribute('href'),
-});
+  // www.facebook.com/xxx?fref=nf
+  return url.pathname.substr(1);
+};
+
+const mapElementToShare = element => {
+  const dateTime = element.querySelector('abbr[data-utime]');
+  const profileLink = element
+    .querySelector('.clearfix > a')
+    .getAttribute('href');
+
+  return {
+    id: getFBID(profileLink),
+    name: element.querySelector('a.profileLink').innerHTML,
+    profileLink,
+    timestamp: Number(dateTime.getAttribute('data-utime')),
+    postLink: dateTime.parentElement.getAttribute('href'),
+  };
+};
 
 const unique = shareList =>
   Object.values(
     shareList.reduce(
       (map, share) =>
         Object.assign({}, map, {
-          [share.link]: share,
+          [share.id]: share,
         }),
       {},
     ),
   );
 
+const getPosts = node =>
+  Array.from(node.children).filter(
+    child => child.getAttribute('role') === 'article',
+  );
+
+const getNextPostNode = node =>
+  node.lastElementChild && !node.lastElementChild.hasAttribute('role')
+    ? node.lastElementChild
+    : null;
+
+const getPostsRecursively = node => {
+  const posts = getPosts(node);
+  const nextPostNode = getNextPostNode(node);
+
+  if (nextPostNode) {
+    return [...posts, ...getPostsRecursively(nextPostNode)];
+  }
+
+  return posts;
+};
+
+const removePostsRecursively = node => {
+  const posts = getPosts(node);
+  const nextPostNode = getNextPostNode(node);
+
+  posts.forEach(post => {
+    node.removeChild(post);
+  });
+
+  if (nextPostNode) {
+    removePostsRecursively(nextPostNode);
+  }
+};
+
+const injectUI = listWrapper => {
+  const parentWrapper = listWrapper.parentElement;
+
+  const ui = document.createElement('div');
+  // TODO: Show UI content
+  // ui.innerHTML = `
+  //   <p>Fetching...</p>
+  // `;
+
+  parentWrapper.insertBefore(ui, listWrapper);
+};
+
 const getFBShareList = () =>
   new Promise(resolve => {
-    const listWrapper = document.querySelector('div[id^=view_shares_dialog]');
-    const shareList = flattenNodes(listWrapper.children).map(mapElementToShare);
+    const listWrapper = document.getElementById('repost_view_dialog');
+    const shareList = [];
 
-    const mutation = mutationsList => {
-      scrollToBottom();
-
-      const addedShares = flattenNodes(mutationsList[0].addedNodes).map(
-        mapElementToShare,
-      );
-
-      shareList.push(...addedShares);
-
+    const addNodes = lastNode => {
+      const addedNodes = getPostsRecursively(lastNode);
+      const addedPosts = addedNodes.map(mapElementToShare);
+      shareList.push(...addedPosts);
       console.log(shareList.length);
-      port.postMessage({
-        type: 'PROGRESS',
-        payload: shareList.length,
-      });
 
-      // pagelet will umount and remount, so we get it everytime the list updated
-      const pagelet = document.getElementById('pagelet_scrolling_pager');
+      // pagelet will umount and remount, so we get it everytime when the list updated
+      const pagelet = lastNode.querySelector('.uiMorePager');
 
-      // When there is no children in pagelet then the fetching is done
-      if (!pagelet.children.length) {
+      if (pagelet) {
+        // fetch next page of posts
+        pagelet.scrollIntoView();
+      } else {
+        // When there is no pagelet then the fetching is done
         resolve(unique(shareList));
+      }
+
+      // safely remove inserted nodes
+      removePostsRecursively(lastNode);
+    };
+
+    const mutation = ([mutation]) => {
+      // get mutation when `.uiMorePager` get removed from DOM
+      if (
+        mutation.removedNodes &&
+        mutation.removedNodes[0] &&
+        mutation.removedNodes[0].classList.contains('uiMorePager')
+      ) {
+        addNodes(mutation.target);
       }
     };
 
@@ -54,9 +125,17 @@ const getFBShareList = () =>
 
     observer.observe(listWrapper, {
       childList: true,
+      subtree: true,
     });
 
-    scrollToBottom();
+    injectUI(listWrapper);
+
+    // start scrolling
+    addNodes(listWrapper);
   });
 
-getFBShareList().then(console.log);
+console.clear();
+getFBShareList().then(shareList => {
+  window.shareList = shareList;
+  console.log(shareList);
+});
