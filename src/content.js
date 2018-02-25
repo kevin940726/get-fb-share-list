@@ -1,5 +1,3 @@
-const port = chrome.runtime.connect();
-
 const getFBID = profileLink => {
   const url = new URL(profileLink);
 
@@ -22,6 +20,7 @@ const mapElementToShare = element => {
     id: getFBID(profileLink),
     name: element.querySelector('a.profileLink').innerHTML,
     profileLink,
+    content: element.querySelector('.userContent').textContent,
     timestamp: Number(dateTime.getAttribute('data-utime')),
     postLink: dateTime.parentElement.getAttribute('href'),
   };
@@ -30,10 +29,10 @@ const mapElementToShare = element => {
 const unique = shareList =>
   Object.values(
     shareList.reduce(
-      (map, share) =>
-        Object.assign({}, map, {
-          [share.id]: share,
-        }),
+      (map, share) => ({
+        ...map,
+        [share.id]: share,
+      }),
       {},
     ),
   );
@@ -72,28 +71,47 @@ const removePostsRecursively = node => {
   }
 };
 
+const renderUI = (ui, progress = 0, isDone = false) => {
+  ui.innerHTML = `
+    <h1>${
+      isDone
+        ? 'Done Fetching!'
+        : 'Fecthing..., please do not close this window.'
+    }</h1>
+    <p>Fetched <b>${progress}</b> share posts.</p>
+  `;
+};
+
 const injectUI = listWrapper => {
   const parentWrapper = listWrapper.parentElement;
 
   const ui = document.createElement('div');
-  // TODO: Show UI content
-  // ui.innerHTML = `
-  //   <p>Fetching...</p>
-  // `;
+  ui.style = `
+    margin: 12px 30px 12px 29px;
+    padding: 12px 12px 0;
+    font-size: 14px;
+    border: 1px solid #dddfe2;
+    border-radius: 3px;
+    text-align: center;
+  `;
+  renderUI(ui);
 
   parentWrapper.insertBefore(ui, listWrapper);
+
+  return ui;
 };
 
 const getFBShareList = () =>
   new Promise(resolve => {
     const listWrapper = document.getElementById('repost_view_dialog');
+    const ui = injectUI(listWrapper);
     const shareList = [];
 
     const addNodes = lastNode => {
       const addedNodes = getPostsRecursively(lastNode);
       const addedPosts = addedNodes.map(mapElementToShare);
       shareList.push(...addedPosts);
-      console.log(shareList.length);
+      renderUI(ui, shareList.length);
 
       // pagelet will umount and remount, so we get it everytime when the list updated
       const pagelet = lastNode.querySelector('.uiMorePager');
@@ -103,6 +121,9 @@ const getFBShareList = () =>
         pagelet.scrollIntoView();
       } else {
         // When there is no pagelet then the fetching is done
+        listWrapper.remove();
+        renderUI(ui, shareList.length, true);
+
         resolve(unique(shareList));
       }
 
@@ -128,14 +149,17 @@ const getFBShareList = () =>
       subtree: true,
     });
 
-    injectUI(listWrapper);
-
     // start scrolling
     addNodes(listWrapper);
   });
 
-console.clear();
 getFBShareList().then(shareList => {
+  chrome.runtime.sendMessage({
+    type: 'SHOW_RESULT_PAGE',
+    payload: shareList,
+  });
+
+  // inject helper variable and logging to the window
   window.shareList = shareList;
   console.log(shareList);
 });

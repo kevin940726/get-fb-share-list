@@ -20,11 +20,18 @@ chrome.pageAction.onClicked.addListener(tab => {
   chrome.tabs.executeScript(tab.id, {
     file: 'dist/content.js',
   });
+});
 
-  // const url = chrome.extension.getURL('src/index.html');
+// TODO: replace it with a map with postID as key
+let shareList = [];
 
-  // chrome.tabs.create({
-  //   url,
-  //   selected: true,
-  // });
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.type === 'SHOW_RESULT_PAGE') {
+    const resultURL = chrome.runtime.getURL('dist/index.html');
+    chrome.tabs.create({ url: resultURL }, tab => {
+      shareList = request.payload;
+    });
+  } else if (request.type === 'GET_RESULT_SHARE_LIST') {
+    sendResponse(shareList);
+  }
 });
