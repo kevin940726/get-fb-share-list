@@ -1,9 +1,8 @@
 import React, { PureComponent, Fragment } from 'react';
 import ReactDOM from 'react-dom';
 import feather from 'feather-icons';
+import { login, getUsersInfo } from './facebook';
 import 'bulma/css/bulma.css';
-
-const SHARE_PROPERTIES = ['name', 'profileLink', 'timestamp', 'postLink'];
 
 class ResultPage extends PureComponent {
   constructor() {
@@ -12,6 +11,7 @@ class ResultPage extends PureComponent {
     this.state = {
       selected: null,
       shareList: [],
+      fbAccessToken: null,
     };
   }
 
@@ -35,6 +35,22 @@ class ResultPage extends PureComponent {
     this.setState({
       selected: postLink,
     });
+  };
+
+  handleGetAdditionalInfo = () => {
+    const { fbAccessToken, shareList } = this.state;
+
+    if (!fbAccessToken) {
+      this.setState({
+        fbAccessToken: login(),
+      });
+
+      return;
+    }
+
+    console.log(fbAccessToken);
+
+    getUsersInfo(shareList.map(share => share.id).slice(0, 1), fbAccessToken);
   };
 
   render() {
@@ -67,6 +83,14 @@ class ResultPage extends PureComponent {
         </section>
         <section className="section">
           <div className="container is-fluid">
+            <div className="content">
+              <a
+                className="button is-link"
+                onClick={this.handleGetAdditionalInfo}
+              >
+                Get addtional user information
+              </a>
+            </div>
             <table className="table is-striped is-hoverable is-fullwidth">
               <thead style={stickyStyle}>{header}</thead>
               <tfoot>{header}</tfoot>

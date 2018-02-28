@@ -35,3 +35,19 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     sendResponse(shareList);
   }
 });
+
+// handle facebook login
+chrome.tabs.onUpdated.addListener((tabID, changeInfo, tab) => {
+  if (
+    changeInfo.url.startsWith(
+      'https://www.facebook.com/connect/login_success.html',
+    )
+  ) {
+    const resultURL = chrome.runtime.getURL('dist/index.html');
+    const { hash } = new URL(changeInfo.url);
+
+    chrome.tabs.update(tabID, {
+      url: `${resultURL}${hash}`,
+    });
+  }
+});
