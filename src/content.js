@@ -32,10 +32,12 @@ const unique = shareList =>
       (map, share) => ({
         ...map,
         [share.id]: share,
-      }),
-      {},
+      }), {},
     ),
   );
+
+const sortByTime = shareList => shareList
+  .sort((prev, cur) => cur.timestamp - prev.timestamp)
 
 const getPosts = node =>
   Array.from(node.children).filter(
@@ -43,9 +45,9 @@ const getPosts = node =>
   );
 
 const getNextPostNode = node =>
-  node.lastElementChild && !node.lastElementChild.hasAttribute('role')
-    ? node.lastElementChild
-    : null;
+  node.lastElementChild && !node.lastElementChild.hasAttribute('role') ?
+  node.lastElementChild :
+  null;
 
 const getPostsRecursively = node => {
   const posts = getPosts(node);
@@ -124,7 +126,7 @@ const getFBShareList = () =>
         listWrapper.remove();
         renderUI(ui, shareList.length, true);
 
-        resolve(unique(shareList));
+        resolve(sortByTime(unique(shareList)));
       }
 
       // safely remove inserted nodes

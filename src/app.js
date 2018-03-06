@@ -22,6 +22,7 @@ class ResultPage extends PureComponent {
       },
       response => {
         console.log(response);
+        window.shareList = response;
         this.setState({
           shareList: response,
         });
